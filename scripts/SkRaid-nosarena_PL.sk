@@ -12,23 +12,29 @@ every 1 second:
 
 function isFlatArea(p: player) :: boolean:
     set {_base} to location of {_p}
-    set {_y} to y-coordinate of {_base} - 1
+    set {_groundY} to y-coordinate of block below {_p}
 
-    # Sprawdza obszar 5x5 pod graczem
+    # Sprawdza obszar 5x5
     loop integers between -2 and 2:
-        set {_x} to loop-number
+        set {_xOff} to loop-number
         loop integers between -2 and 2:
-            set {_z} to loop-number-2
-            set {_check} to location at (x-coordinate of {_base} + {_x}), {_y}, (z-coordinate of {_base} + {_z}) in world of {_p}
-            
-            # Musi być solidny blok
-            if block at {_check} is not solid:
+            set {_zOff} to loop-number-2
+
+            set {_checkX} to x-coordinate of {_base} + {_xOff}
+            set {_checkZ} to z-coordinate of {_base} + {_zOff}
+
+            set {_checkLoc} to location at {_checkX}, {_groundY}, {_checkZ} in world of {_p}
+
+            # Blok musi istnieć i nie może być powietrzem / wodą / lawą
+            if block at {_checkLoc} is air:
                 return false
-            
-            # Nad nim powinno być powietrze (żeby było miejsce na moby)
-            set {_above} to {_check} ~ vector(0, 1, 0)
-            if block at {_above} is not air:
+            if block at {_checkLoc} is water:
                 return false
+            if block at {_checkLoc} is lava:
+                return false
+            if block at {_checkLoc} is cave air:
+                return false
+
     return true
 
 function raidUpdateBar():
