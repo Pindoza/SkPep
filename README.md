@@ -98,18 +98,19 @@ Reloads SkPep itself.
 /pepreload
 ```
 
-## 📁 Repository Structure
+## 📁 Minecraft Structure
 
 ```text
-SkPep/
+plugins/Skript/scripts/
 │
-├── README.md
 ├── SkPep.sk
+├── my-script.sk
+├── another-script.sk
 │
-└── scripts/
+└── downloaded/ # This is where the downloaded scripts go.
     ├── example.sk
-    ├── another-script.sk
-    └── my-script.sk
+    ├── zadania.sk
+    └── script.sk
 ```
 
 ### 📚 Available Scripts
@@ -143,6 +144,8 @@ SkPep creates the directory automatically when needed.
 | Permission | Description |
 |---|---|
 | `skpep.use` | Allows using SkPep commands |
+
+Or use /op <player>
 
 ## ⚠️ Security
 
