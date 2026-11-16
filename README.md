@@ -57,7 +57,7 @@
 
 The repository URL determines where SkPep searches for scripts when using `/pep <name>`.
 
-```vb
+```vbnet
 options:
     prefix: §f[§bSkPep§f]
     repo: https://raw.githubusercontent.com/Pindoza/SkPep/main/scripts/
