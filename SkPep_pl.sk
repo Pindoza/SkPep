@@ -28,9 +28,15 @@ command /pep <text>:
     trigger:
         set {_args::*} to split arg-1 at " "
 
-        if {_args::1} is "link":
+        if {_args::1} starts with "https://raw.githubusercontent.com/":
+            set {_url} to {_args::1}
+            set {_urlParts::*} to split {_url} at "/"
+            set {_name} to last element of {_urlParts::*}
+            replace all ".sk" with "" in {_name}
+
+        else if {_args::1} is "link":
             if {_args::2} is not set:
-                send "{@prefix} §cUżycie: §f/pep link <URL> [nazwa]" to player
+                send "{@prefix} §cUżycie: /pep link <URL> [nazwa]" to player
                 stop
 
             set {_url} to {_args::2}
@@ -44,12 +50,12 @@ command /pep <text>:
             else:
                 set {_urlParts::*} to split {_url} at "/"
                 set {_name} to last element of {_urlParts::*}
+                replace all ".sk" with "" in {_name}
 
         else:
             set {_name} to {_args::1}
+            replace all ".sk" with "" in {_name}
             set {_url} to "{@repo}%{_name}%.sk"
-
-        replace all ".sk" with "" in {_name}
 
         if {_name} is not set:
             send "{@prefix} §cNie podano nazwy pliku!" to player
@@ -97,16 +103,16 @@ command /pep <text>:
             send "{@prefix} §cPobrany plik jest pusty!" to player
             stop
 
-        set {_folder} to Paths.get("plugins/Skript/scripts/downloadedPep")
+        set {_folder} to Paths.get("plugins/Skript/scripts/downloaded")
         Files.createDirectories({_folder})
 
-        set {_path} to Paths.get("plugins/Skript/scripts/downloadedPep/%{_name}%.sk")
+        set {_path} to Paths.get("plugins/Skript/scripts/downloaded/%{_name}%.sk")
         Files.writeString({_path}, {_content})
 
         send "{@prefix} §aPobrano §f%{_name}%.sk§a!" to player
         send "{@prefix} §aZapisano plik: §f%{_name}%.sk" to console
 
-        execute console command "skript reload downloadedPep/%{_name}%.sk"
+        execute console command "skript reload downloaded/%{_name}%.sk"
 
         send "{@prefix} §aZakończono pobieranie i przeładowanie!" to player
         send "{@prefix} §aPrzeładowano %{_name}%.sk" to console
