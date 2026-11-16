@@ -1,0 +1,112 @@
+import:
+    java.nio.file.Files
+    java.nio.file.Paths
+	
+options:
+    prefix: §f[§bSkPep§f]
+    repo: https://raw.githubusercontent.com/Pindoza/SkPep/main/
+
+on load:
+
+    send " §f[§a9999 §cSkPep.sk §a9999§f]" to console
+    send "  {@prefix} §7Uruchamianie §cSkPep..." to console
+    send "   {@prefix} §aSkPep został załadowany!" to console
+
+command /pepreload:
+    permission: skpep.use
+    trigger:
+        send "{@prefix} §ePrzeładowywanie addona..."
+        wait 1 second
+        execute console command "sk reload SkPep.sk"
+        send " §f[§a9999 §cSkPep.sk §a9999§f]" to player
+        send "  {@prefix} §7Uruchamianie §cSkPep..." to player
+        send "   {@prefix} §aSkPep został załadowany!" to player
+        send "    {@prefix} §aPrzeładowano!"
+		
+command /pep <text>:
+    permission: skpep.use
+    trigger:
+        set {_args::*} to split arg-1 at " "
+
+        if {_args::1} is "link":
+            if {_args::2} is not set:
+                send "{@prefix} §cUżycie: §f/pep link <URL> [nazwa]" to player
+                stop
+
+            set {_url} to {_args::2}
+
+            if {_url} does not start with "https://raw.githubusercontent.com/":
+                send "{@prefix} §cDozwolone są tylko linki raw.githubusercontent.com!" to player
+                stop
+
+            if {_args::3} is set:
+                set {_name} to {_args::3}
+            else:
+                set {_urlParts::*} to split {_url} at "/"
+                set {_name} to last element of {_urlParts::*}
+
+        else:
+            set {_name} to {_args::1}
+            set {_url} to "{@repo}%{_name}%.sk"
+
+        replace all ".sk" with "" in {_name}
+
+        if {_name} is not set:
+            send "{@prefix} §cNie podano nazwy pliku!" to player
+            stop
+
+        if {_name} contains "/":
+            send "{@prefix} §cNieprawidłowa nazwa pliku!" to player
+            stop
+
+        if {_name} contains "\":
+            send "{@prefix} §cNieprawidłowa nazwa pliku!" to player
+            stop
+
+        if {_name} contains ":":
+            send "{@prefix} §cNieprawidłowa nazwa pliku!" to player
+            stop
+
+        if {_name} contains ".":
+            send "{@prefix} §cNieprawidłowa nazwa pliku!" to player
+            stop
+
+        if {_name} contains " ":
+            send "{@prefix} §cNieprawidłowa nazwa pliku!" to player
+            stop
+
+        send "{@prefix} §ePobieranie §b%{_name}%.sk§e..." to player
+        send "{@prefix} §ePobieranie pliku: §b%{_name}%.sk" to console
+
+        set {_request} to prepare GET request on "%{_url}%"
+        execute {_request}
+        set {_response} to last response of {_request}
+
+        if status code of {_response} is not 200:
+            send "{@prefix} §cNie udało się pobrać pliku! §7HTTP: §f%status code of {_response}%" to player
+            send "{@prefix} §cBłąd pobierania %{_name}%.sk — HTTP %status code of {_response}%" to console
+            stop
+
+        set {_content} to body of {_response}
+
+        if {_content} is not set:
+            send "{@prefix} §cSerwer zwrócił pustą odpowiedź!" to player
+            stop
+
+        if {_content} is "":
+            send "{@prefix} §cPobrany plik jest pusty!" to player
+            stop
+
+        set {_folder} to Paths.get("plugins/Skript/scripts/downloadedPep")
+        Files.createDirectories({_folder})
+
+        set {_path} to Paths.get("plugins/Skript/scripts/downloadedPep/%{_name}%.sk")
+        Files.writeString({_path}, {_content})
+
+        send "{@prefix} §aPobrano §f%{_name}%.sk§a!" to player
+        send "{@prefix} §aZapisano plik: §f%{_name}%.sk" to console
+
+        execute console command "skript reload downloadedPep/%{_name}%.sk"
+
+        send "{@prefix} §aZakończono pobieranie i przeładowanie!" to player
+        send "{@prefix} §aPrzeładowano %{_name}%.sk" to console
