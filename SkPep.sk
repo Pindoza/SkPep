@@ -4,7 +4,7 @@ import:
 	
 options:
     prefix: §f[§bSkPep§f]
-    repo: https://raw.githubusercontent.com/Pindoza/SkPep/main/
+    repo: https://raw.githubusercontent.com/Pindoza/SkPep/main/scripts
 
 on load:
 
