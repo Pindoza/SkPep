@@ -34,52 +34,33 @@ function raidSpawn(type: entitytype, amount: number, p: player):
     if {_p} is not set:
         stop
 
+    send "&7[DEBUG] Próba spawnu: %{_amount}% x %{_type}%" to {_p}
+
     loop {_amount} times:
         if {raid.active} is not set:
             stop
 
-        set {_base} to location of {_p}
-        set {_world} to world of {_p}
+        set {_loc} to location of {_p}
 
-        # Losowa pozycja w promieniu (prostsza i stabilniejsza metoda)
-        set {_offsetX} to random number between -{@spawn-radius} and {@spawn-radius}
-        set {_offsetZ} to random number between -{@spawn-radius} and {@spawn-radius}
+        # proste losowe przesunięcie
+        set {_rx} to random number between -20 and 20
+        set {_rz} to random number between -20 and 20
 
-        set {_x} to x-coordinate of {_base} + {_offsetX}
-        set {_z} to z-coordinate of {_base} + {_offsetZ}
-        set {_y} to y-coordinate of {_base}
+        set {_loc} to {_loc} ~ vector({_rx}, 0, {_rz})
 
-        set {_loc} to location at {_x}, {_y}, {_z} in {_world}
-
-        # Szukanie solidnego bloku pod spodem (do 15 bloków w dół)
-        set {_found} to false
-        loop 15 times:
-            if block at {_loc} is air:
-                if block below {_loc} is solid:
-                    set {_found} to true
-                    stop loop
-            set y-coordinate of {_loc} to y-coordinate of {_loc} - 1
-
-        # Jeśli nie znalazło ziemi, spawnuj trochę wyżej od gracza
-        if {_found} is false:
-            set {_loc} to location of {_p}
-            set y-coordinate of {_loc} to y-coordinate of {_loc} + 1
+        # podnieś trochę do góry, żeby nie spawniło w bloku
+        set {_loc} to {_loc} ~ vector(0, 1, 0)
 
         spawn {_type} at {_loc}
         set {_mob} to last spawned entity
 
         if {_mob} is set:
             set {raid.mobs::%uuid of {_mob}%} to true
+            send "&a[DEBUG] Zespawnowano %{_type}% na %{_loc}%" to {_p}
         else:
-            # awaryjny spawn bliżej gracza
-            set {_loc} to location of {_p}
-            set {_loc} to {_loc} ~ vector(random number between -6 and 6, 0, random number between -6 and 6)
-            spawn {_type} at {_loc}
-            set {_mob} to last spawned entity
-            if {_mob} is set:
-                set {raid.mobs::%uuid of {_mob}%} to true
+            send "&c[DEBUG] Nie udało się zespawnować %{_type}%!" to {_p}
 
-        wait {@spawn-delay}
+        wait 5 ticks
 
 function raidCleanup():
     if {raid.bar} is set:
