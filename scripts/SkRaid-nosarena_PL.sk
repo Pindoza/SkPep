@@ -1,30 +1,15 @@
 options:
     world: world
-    min-x: 776.5 # X coordinates of first corner
-    min-y: 102 # Y coordinates of first corner
-    min-z: -337.5 # Z coordinates of first corner
-    max-x: 783.5 # X coordinates of second corner
-    max-y: 106 # Y coordinates of second corner
-    max-z: -344.5 # Z coordinates of second corner
-    wave-delay: 5 seconds # delay before next wave
-    spawn-delay: 100 milliseconds # mob spawning delay
-    spawn-radius: 50 # promień spawnu wokół gracza
+    wave-delay: 5 seconds
+    spawn-delay: 100 milliseconds
+    spawn-radius: 50
 
 # =============== #
-# Kill Phantoms (remove if needed)
+# Kill Phantoms (opcjonalne)
 every 1 second:
     loop all players:
         loop all phantoms in radius 20 around loop-player:
             delete loop-entity-2
-
-function raidInside(p: player) :: boolean:
-    if world of {_p} is not world("{@world}"):
-        return false
-    if x-coordinate of {_p} is between {@min-x} and {@max-x}:
-        if y-coordinate of {_p} is between {@min-y} and {@max-y}:
-            if z-coordinate of {_p} is between {@min-z} and {@max-z}:
-                return true
-    return false
 
 function raidUpdateBar():
     if {raid.bar} is not set:
@@ -51,22 +36,20 @@ function raidSpawn(type: entitytype, amount: number, p: player):
     loop {_amount} times:
         if {raid.active} is not set:
             stop
-        # Losowa lokalizacja w promieniu 50 bloków od gracza
         set {_base} to location of {_p}
         set {_angle} to random number between 0 and 360
-        set {_dist} to random number between 8 and {@spawn-radius} # minimum 8 bloków, żeby nie spawniły się pod nogami
+        set {_dist} to random number between 8 and {@spawn-radius}
         set {_x} to x-coordinate of {_base} + (cos({_angle}) * {_dist})
         set {_z} to z-coordinate of {_base} + (sin({_angle}) * {_dist})
         set {_y} to y-coordinate of {_base}
         set {_loc} to location at {_x}, {_y}, {_z} in world of {_p}
-        # Próba znalezienia bezpiecznej pozycji (ziemia)
         set {_safe} to {_loc}
         loop 20 times:
             if block at {_safe} is air:
                 if block below {_safe} is solid:
                     set {_loc} to {_safe}
                     stop loop
-            set {_safe} to location {_safe} ~ vector(0, -1, 0)
+            set {_safe} to {_safe} ~ vector(0, -1, 0)
         spawn {_type} at {_loc}
         set {_mob} to last spawned entity
         if {_mob} is set:
@@ -83,7 +66,6 @@ function raidCleanup():
     delete {raid.wave}
     delete {raid.wave-total}
     delete {raid.mobs::*}
-    delete {raid.entered::*}
     delete {raid.finished}
 
 function raidIsOwner(p: player) :: boolean:
@@ -93,30 +75,9 @@ function raidIsOwner(p: player) :: boolean:
         return true
     return false
 
-on player move:
-    if raidInside(player) is true:
-        if {raid.entered::%uuid of player%} is not set:
-            set {raid.entered::%uuid of player%} to true
-            if {raid.active} is set:
-                send "&cRaid jest już aktywny!" to player
-            else:
-                send "" to player
-                send "&8&m--------------------------------" to player
-                send "&5&lRAID ARENA" to player
-                send "&7Wykryto wejście na arenę." to player
-                send "&7Chcesz rozpocząć raid?" to player
-                send "&aWpisz: &f/raid confirm" to player
-                send "&8&m--------------------------------" to player
-                send "" to player
-    else:
-        delete {raid.entered::%uuid of player%}
-
 command /raid [<text>]:
     trigger:
-        if arg-1 is "confirm":
-            if {raid.entered::%uuid of player%} is not set:
-                send "&cMusisz znajdować się na arenie!" to player
-                stop
+        if arg-1 is "start":
             if {raid.active} is set:
                 send "&cRaid jest już aktywny!" to player
                 stop
@@ -344,13 +305,12 @@ command /raid [<text>]:
             delete {raid.mobs::*}
             wait 3 seconds
             delete {raid.finished}
+
         else if arg-1 is "cancel":
             if {raid.active} is not set:
                 send "&cNie ma żadnego aktywnego raida!" to player
                 stop
-            # Zabij wszystkie moby
-            execute console command "execute at %player% run mobkill all world" # uses essentialsX, remove if needed
-            # Wyczyść cały raid
+            execute console command "execute at %player% run mobkill all world"
             raidCleanup()
             send "" to player
             send "&8&m--------------------------------" to player
@@ -359,8 +319,9 @@ command /raid [<text>]:
             send "&8&m--------------------------------" to player
             send "" to player
             play sound "entity.experience_orb.pickup" with volume 1 and pitch 1 at player
+
         else:
-            send "&7Użycie: &f/raid confirm &7lub &f/raid cancel" to player
+            send "&7Użycie: &f/raid start &7lub &f/raid cancel" to player
 
 on death of living entity:
     if {raid.active} is not set:
@@ -373,7 +334,6 @@ on death of living entity:
     delete {raid.mobs::%{_uuid}%}
     raidUpdateBar()
 
-# end raid script
 on quit:
     if {raid.owner} is uuid of player:
         raidCleanup()
