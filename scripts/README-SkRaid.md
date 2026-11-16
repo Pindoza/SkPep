@@ -1,34 +1,45 @@
+# SkRaid
 
-<div align="center">
+A custom raid system for Minecraft servers, created using Skript.
 
-# ⚔️ SkRaid-NoSarea
+SkRaid comes in two versions. Both provide the same raid system, but differ in how mob spawn locations are handled.
 
-### Automatic Spawns. Custom Raids.
+## 📦 Versions
 
-**A configurable Minecraft raid system powered by Skript.**
+### SkRaid-Sarea
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.5-brightgreen?style=for-the-badge&logo=minecraft)](https://www.minecraft.net/)
-[![Skript](https://img.shields.io/badge/Skript-2.17+-blue?style=for-the-badge)](https://github.com/SkriptLang/Skript)
+**Manual spawn location configuration.**
 
-</div>
+- Requires manually configured mob spawn locations.
+- Gives you control over where raid mobs spawn.
+- Recommended if you want to choose specific spawn locations.
 
----
+### SkRaid-NoSarea
+
+**Automatic mob spawn locations.**
+
+- Does not require manually configured spawn locations.
+- Handles mob spawn locations automatically.
+- Recommended if you don't want to configure spawn locations yourself.
+
+## ⚠️ Important — Only One Version Allowed
+
+**You can install only ONE SkRaid version at a time!**
+
+- Do not install `SkRaid-Sarea` and `SkRaid-NoSarea` simultaneously.
+- Both versions use the same raid system and may conflict with each other.
+- Remove the other version before installing or enabling a different one.
+
+Running both versions together may cause unexpected behavior, duplicate events or conflicts.
 
 ## ✨ Features
 
-- ⚔️ **Custom Raid System** — Run custom raids on your Minecraft server.
-- 👾 **Automatic Mob Spawning** — Raid mobs spawn without manually configured locations.
-- 🔄 **Automatic Raid Management** — Manage raid waves automatically.
-- ⚙️ **Configurable System** — Adjust the raid system to your server.
-- 🎮 **Minecraft Integration** — Designed for Minecraft servers running Skript.
+- Custom Minecraft raid system
+- Two versions with different spawn location handling
+- Skript-based implementation
+- Designed for Minecraft servers
 
-## 📍 Spawn Configuration
-
-Unlike SkRaid-Sarea, this version does not require you to configure mob spawn locations.
-
-The system handles mob spawning automatically without manually setting spawn coordinates.
-
-## 📦 Requirements
+## 📋 Requirements
 
 - Minecraft 1.21.5
 - Java 21+
@@ -36,33 +47,38 @@ The system handles mob spawning automatically without manually setting spawn coo
 
 ## 📥 Installation
 
-1. Download `SkRaid-NoSarea.sk`.
-2. Place it inside your Skript scripts directory:
+1. Choose the version you want to use:
+   - `SkRaid-Sarea`
+   - `SkRaid-NoSarea`
+2. Download the `.sk` file.
+3. Place it inside your Skript scripts folder:
 
    `plugins/Skript/scripts/`
 
-3. Reload the script:
+4. Make sure the other SkRaid version is not installed.
+5. Reload Skript:
 
-```text
-/sk reload SkRaid-NoSarea.sk
-```
+   `/sk reload <filename>`
 
-## 📁 Repository Structure
+## 🔄 Switching Versions
 
-```text
-SkRaid-NoSarea/
-├── README.md
-└── SkRaid-NoSarea.sk
-```
+To switch between versions:
 
-## ⚠️ Important
+1. Disable or remove your current SkRaid script.
+2. Install the other version.
+3. Reload Skript.
 
-Mob spawn locations are handled automatically. No manual spawn location configuration is required.
+**Never run both versions at the same time.**
 
----
+## 📁 Versions Comparison
 
-<div align="center">
+| Feature | SkRaid-Sarea | SkRaid-NoSarea |
+|---|---|---|
+| Manual spawn locations | Required | Not required |
+| Automatic spawn locations | No | Yes |
+| Same raid system | Yes | Yes |
+| Can run together | No | No |
 
-**⚔️ SkRaid-NoSarea — Simple setup, automatic spawning.**
+## 📄 License
 
-</div>
+See the repository for license information.
