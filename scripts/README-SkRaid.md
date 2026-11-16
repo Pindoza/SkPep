@@ -28,7 +28,7 @@ SkRaid comes in two versions. Both provide the same raid system, but differ in h
 
 - Do not install `SkRaid-Sarea` and `SkRaid-NoSarea` simultaneously.
 - Both versions use the same raid system and may conflict with each other.
-- Remove the other version before installing or enabling a different one.
+- Remove the other version before installing or enabling a different one. (Or disable one by adding "-" (dash) before the script name, command: /sk disable <filename>)
 
 Running both versions together may cause unexpected behavior, duplicate events or conflicts.
 
