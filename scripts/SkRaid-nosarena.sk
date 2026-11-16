@@ -1,0 +1,379 @@
+options:
+    world: world
+    min-x: 776.5 # X coordinates of first corner
+    min-y: 102 # Y coordinates of first corner
+    min-z: -337.5 # Z coordinates of first corner
+    max-x: 783.5 # X coordinates of second corner
+    max-y: 106 # Y coordinates of second corner
+    max-z: -344.5 # Z coordinates of second corner
+    wave-delay: 5 seconds # delay before next wave
+    spawn-delay: 100 milliseconds # mob spawning delay
+    spawn-radius: 50 # promień spawnu wokół gracza
+
+# =============== #
+# Kill Phantoms (remove if needed)
+every 1 second:
+    loop all players:
+        loop all phantoms in radius 20 around loop-player:
+            delete loop-entity-2
+
+function raidInside(p: player) :: boolean:
+    if world of {_p} is not world("{@world}"):
+        return false
+    if x-coordinate of {_p} is between {@min-x} and {@max-x}:
+        if y-coordinate of {_p} is between {@min-y} and {@max-y}:
+            if z-coordinate of {_p} is between {@min-z} and {@max-z}:
+                return true
+    return false
+
+function raidUpdateBar():
+    if {raid.bar} is not set:
+        stop
+    if {raid.active} is not set:
+        stop
+    set {_remaining} to size of {raid.mobs::*}
+    set {_total} to {raid.wave-total}
+    if {_total} <= 0:
+        stop
+    set {_progress} to ({_remaining} / {_total})
+    if {_progress} < 0:
+        set {_progress} to 0
+    if {_progress} > 1:
+        set {_progress} to 1
+    set progress of {raid.bar} to {_progress}
+    set title of {raid.bar} to "&5RAID &8| &fFala %{raid.wave}% &8| &cPozostalo: %{_remaining}%"
+
+function raidSpawn(type: entitytype, amount: number, p: player):
+    if {raid.active} is not set:
+        stop
+    if {_p} is not set:
+        stop
+    loop {_amount} times:
+        if {raid.active} is not set:
+            stop
+        # Losowa lokalizacja w promieniu 50 bloków od gracza
+        set {_base} to location of {_p}
+        set {_angle} to random number between 0 and 360
+        set {_dist} to random number between 8 and {@spawn-radius} # minimum 8 bloków, żeby nie spawniły się pod nogami
+        set {_x} to x-coordinate of {_base} + (cos({_angle}) * {_dist})
+        set {_z} to z-coordinate of {_base} + (sin({_angle}) * {_dist})
+        set {_y} to y-coordinate of {_base}
+        set {_loc} to location at {_x}, {_y}, {_z} in world of {_p}
+        # Próba znalezienia bezpiecznej pozycji (ziemia)
+        set {_safe} to {_loc}
+        loop 20 times:
+            if block at {_safe} is air:
+                if block below {_safe} is solid:
+                    set {_loc} to {_safe}
+                    stop loop
+            set {_safe} to location {_safe} ~ vector(0, -1, 0)
+        spawn {_type} at {_loc}
+        set {_mob} to last spawned entity
+        if {_mob} is set:
+            set {raid.mobs::%uuid of {_mob}%} to true
+        wait {@spawn-delay}
+
+function raidCleanup():
+    if {raid.bar} is set:
+        loop all players:
+            remove loop-player from viewers of {raid.bar}
+        delete {raid.bar}
+    delete {raid.active}
+    delete {raid.owner}
+    delete {raid.wave}
+    delete {raid.wave-total}
+    delete {raid.mobs::*}
+    delete {raid.entered::*}
+    delete {raid.finished}
+
+function raidIsOwner(p: player) :: boolean:
+    if {raid.owner} is not set:
+        return false
+    if {raid.owner} is uuid of {_p}:
+        return true
+    return false
+
+on player move:
+    if raidInside(player) is true:
+        if {raid.entered::%uuid of player%} is not set:
+            set {raid.entered::%uuid of player%} to true
+            if {raid.active} is set:
+                send "&cRaid jest już aktywny!" to player
+            else:
+                send "" to player
+                send "&8&m--------------------------------" to player
+                send "&5&lRAID ARENA" to player
+                send "&7Wykryto wejście na arenę." to player
+                send "&7Chcesz rozpocząć raid?" to player
+                send "&aWpisz: &f/raid confirm" to player
+                send "&8&m--------------------------------" to player
+                send "" to player
+    else:
+        delete {raid.entered::%uuid of player%}
+
+command /raid [<text>]:
+    trigger:
+        if arg-1 is "confirm":
+            if {raid.entered::%uuid of player%} is not set:
+                send "&cMusisz znajdować się na arenie!" to player
+                stop
+            if {raid.active} is set:
+                send "&cRaid jest już aktywny!" to player
+                stop
+            if {raid.finished} is set:
+                send "&cPoczekaj chwilę przed kolejnym raidem." to player
+                stop
+            set {raid.active} to true
+            set {raid.owner} to uuid of player
+            set {raid.wave} to 0
+            set {raid.wave-total} to 0
+            delete {raid.mobs::*}
+            delete {raid.finished}
+            set {_bar} to a purple boss bar titled "&5RAID &8| &fPrzygotowanie..."
+            set color of {_bar} to purple
+            set style of {_bar} to 10 notches
+            set progress of {_bar} to 1
+            set {raid.bar} to {_bar}
+            add player to viewers of {_bar}
+            apply regeneration 1 to player for 5 seconds
+            apply saturation 1 to player for 5 seconds
+            send title "&5&lRAID" with subtitle "&aPrzygotuj się! Raid rozpocznie się za 5 sekund!" to player for 5 seconds
+            play sound "ambient.cave" with volume 1 and pitch 1 at player
+            loop 5 times:
+                if {raid.active} is not set:
+                    stop
+                if raidIsOwner(player) is false:
+                    raidCleanup()
+                    stop
+                set {_seconds} to 6 - loop-number
+                send action bar "&5&lRAID &8» &fStart za &d%{_seconds}%s" to player
+                wait 1 second
+            if {raid.active} is not set:
+                stop
+            if raidIsOwner(player) is false:
+                raidCleanup()
+                stop
+            # ==================== FALA 1 ====================
+            set {raid.wave} to 1
+            set {raid.wave-total} to 10
+            delete {raid.mobs::*}
+            send "&5&lRAID &8» &fRozpoczyna się fala 1!" to player
+            play sound "item.goat_horn.sound.2" with volume 1 and pitch 1 at player
+            raidSpawn(zombie, 10, player)
+            raidUpdateBar()
+            while size of {raid.mobs::*} > 0:
+                if {raid.active} is not set:
+                    stop
+                if raidIsOwner(player) is false:
+                    raidCleanup()
+                    stop
+                raidUpdateBar()
+                wait 1 second
+            if {raid.active} is not set:
+                stop
+            send "&aFala 1 ukończona!" to player
+            set title of {raid.bar} to "&5RAID &8| &ePrzerwa... &8| &7Następna fala wkrótce"
+            set progress of {raid.bar} to 1
+            wait {@wave-delay}
+            if {raid.active} is not set:
+                stop
+            if raidIsOwner(player) is false:
+                raidCleanup()
+                stop
+            # ==================== FALA 2 ====================
+            set {raid.wave} to 2
+            set {raid.wave-total} to 15
+            delete {raid.mobs::*}
+            send "&5&lRAID &8» &fRozpoczyna się fala 2!" to player
+            play sound "item.goat_horn.sound.2" with volume 1 and pitch 1 at player
+            raidSpawn(zombie, 10, player)
+            raidSpawn(skeleton, 5, player)
+            raidUpdateBar()
+            while size of {raid.mobs::*} > 0:
+                if {raid.active} is not set:
+                    stop
+                if raidIsOwner(player) is false:
+                    raidCleanup()
+                    stop
+                raidUpdateBar()
+                wait 1 second
+            if {raid.active} is not set:
+                stop
+            send "&aFala 2 ukończona!" to player
+            set title of {raid.bar} to "&5RAID &8| &ePrzerwa... &8| &7Następna fala wkrótce"
+            set progress of {raid.bar} to 1
+            wait {@wave-delay}
+            if {raid.active} is not set:
+                stop
+            if raidIsOwner(player) is false:
+                raidCleanup()
+                stop
+            # ==================== FALA 3 ====================
+            set {raid.wave} to 3
+            set {raid.wave-total} to 20
+            delete {raid.mobs::*}
+            send "&5&lRAID &8» &fRozpoczyna się fala 3!" to player
+            play sound "item.goat_horn.sound.2" with volume 1 and pitch 1 at player
+            raidSpawn(zombie, 8, player)
+            raidSpawn(skeleton, 7, player)
+            raidSpawn(spider, 5, player)
+            raidUpdateBar()
+            while size of {raid.mobs::*} > 0:
+                if {raid.active} is not set:
+                    stop
+                if raidIsOwner(player) is false:
+                    raidCleanup()
+                    stop
+                raidUpdateBar()
+                wait 1 second
+            if {raid.active} is not set:
+                stop
+            send "&aFala 3 ukończona!" to player
+            set title of {raid.bar} to "&5RAID &8| &ePrzerwa... &8| &7Następna fala wkrótce"
+            set progress of {raid.bar} to 1
+            wait {@wave-delay}
+            if {raid.active} is not set:
+                stop
+            if raidIsOwner(player) is false:
+                raidCleanup()
+                stop
+            # ==================== FALA 4 ====================
+            set {raid.wave} to 4
+            set {raid.wave-total} to 25
+            delete {raid.mobs::*}
+            send "&5&lRAID &8» &fRozpoczyna się fala 4!" to player
+            play sound "item.goat_horn.sound.2" with volume 1 and pitch 1 at player
+            raidSpawn(zombie, 10, player)
+            raidSpawn(skeleton, 8, player)
+            raidSpawn(spider, 5, player)
+            raidSpawn(husk, 2, player)
+            raidUpdateBar()
+            while size of {raid.mobs::*} > 0:
+                if {raid.active} is not set:
+                    stop
+                if raidIsOwner(player) is false:
+                    raidCleanup()
+                    stop
+                raidUpdateBar()
+                wait 1 second
+            if {raid.active} is not set:
+                stop
+            send "&aFala 4 ukończona!" to player
+            set title of {raid.bar} to "&5RAID &8| &ePrzerwa... &8| &7Następna fala wkrótce"
+            set progress of {raid.bar} to 1
+            wait {@wave-delay}
+            if {raid.active} is not set:
+                stop
+            if raidIsOwner(player) is false:
+                raidCleanup()
+                stop
+            # ==================== FALA 5 ====================
+            set {raid.wave} to 5
+            set {raid.wave-total} to 30
+            delete {raid.mobs::*}
+            send "&5&lRAID &8» &fRozpoczyna się fala 5!" to player
+            play sound "item.goat_horn.sound.2" with volume 1 and pitch 1 at player
+            raidSpawn(zombie, 10, player)
+            raidSpawn(skeleton, 8, player)
+            raidSpawn(spider, 6, player)
+            raidSpawn(husk, 3, player)
+            raidSpawn(stray, 3, player)
+            raidUpdateBar()
+            while size of {raid.mobs::*} > 0:
+                if {raid.active} is not set:
+                    stop
+                if raidIsOwner(player) is false:
+                    raidCleanup()
+                    stop
+                raidUpdateBar()
+                wait 1 second
+            if {raid.active} is not set:
+                stop
+            send "&aFala 5 ukończona!" to player
+            set title of {raid.bar} to "&5RAID &8| &ePrzerwa... &8| &7Następna fala wkrótce"
+            set progress of {raid.bar} to 1
+            wait {@wave-delay}
+            if {raid.active} is not set:
+                stop
+            if raidIsOwner(player) is false:
+                raidCleanup()
+                stop
+            # ==================== FALA 6 (ostatnia) ====================
+            set {raid.wave} to 6
+            set {raid.wave-total} to 35
+            delete {raid.mobs::*}
+            send "&5&lRAID &8» &cRozpoczyna się OSTATNIA fala!" to player
+            play sound "item.goat_horn.sound.2" with volume 1 and pitch 1 at player
+            raidSpawn(zombie, 10, player)
+            raidSpawn(skeleton, 8, player)
+            raidSpawn(spider, 6, player)
+            raidSpawn(husk, 4, player)
+            raidSpawn(stray, 4, player)
+            raidSpawn(evoker, 3, player)
+            raidUpdateBar()
+            while size of {raid.mobs::*} > 0:
+                if {raid.active} is not set:
+                    stop
+                if raidIsOwner(player) is false:
+                    raidCleanup()
+                    stop
+                raidUpdateBar()
+                wait 1 second
+            if {raid.active} is not set:
+                stop
+            if raidIsOwner(player) is false:
+                raidCleanup()
+                stop
+            # ==================== ZAKOŃCZENIE ====================
+            set {raid.finished} to true
+            delete {raid.active}
+            if {raid.bar} is set:
+                remove player from viewers of {raid.bar}
+                delete {raid.bar}
+            send title "&6&lCHALLENGE COMPLETE!" with subtitle "&eGratulacje! Ukończyłeś cały raid!" to player for 4 seconds
+            play sound "ui.toast.challenge_complete" with volume 1 and pitch 1 at player
+            send "" to player
+            send "&8&m--------------------------------" to player
+            send "&6&lRAID UKOŃCZONY!" to player
+            send "&aPokonałeś wszystkich przeciwników we wszystkich 6 falach!" to player
+            send "&8&m--------------------------------" to player
+            send "" to player
+            delete {raid.owner}
+            delete {raid.wave}
+            delete {raid.wave-total}
+            delete {raid.mobs::*}
+            wait 3 seconds
+            delete {raid.finished}
+        else if arg-1 is "cancel":
+            if {raid.active} is not set:
+                send "&cNie ma żadnego aktywnego raida!" to player
+                stop
+            # Zabij wszystkie moby
+            execute console command "execute at %player% run mobkill all world" # uses essentialsX, remove if needed
+            # Wyczyść cały raid
+            raidCleanup()
+            send "" to player
+            send "&8&m--------------------------------" to player
+            send "&c&lRAID ANULOWANY!" to player
+            send "&7Raid został wyłączony." to player
+            send "&8&m--------------------------------" to player
+            send "" to player
+            play sound "entity.experience_orb.pickup" with volume 1 and pitch 1 at player
+        else:
+            send "&7Użycie: &f/raid confirm &7lub &f/raid cancel" to player
+
+on death of living entity:
+    if {raid.active} is not set:
+        stop
+    set {_uuid} to uuid of victim
+    if {_uuid} is not set:
+        stop
+    if {raid.mobs::%{_uuid}%} is not set:
+        stop
+    delete {raid.mobs::%{_uuid}%}
+    raidUpdateBar()
+
+# end raid script
+on quit:
+    if {raid.owner} is uuid of player:
+        raidCleanup()
