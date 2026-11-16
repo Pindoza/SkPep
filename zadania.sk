@@ -1,0 +1,270 @@
+# quests.sk – System zadań Minecraft
+# Paper 1.21.5 + Skript 2.16.2 + EssentialsX 2.21.1 + SkEssentials 1.2.0
+
+function questTarget(id: number) :: number:
+    if {_id} is 1:
+        return 1000
+    if {_id} is 2:
+        return 10000
+    if {_id} is 3:
+        return 500
+    if {_id} is 4:
+        return 64
+    if {_id} is 5:
+        return 16
+    if {_id} is 6:
+        return 256
+    if {_id} is 7:
+        return 100
+    if {_id} is 8:
+        return 50
+    return 0
+
+# Kalibracja postępu zadań pieniężnych (max z aktualnym saldem)
+function questCalibrateMoney(p: player):
+    set {_uuid} to uuid of {_p}
+    set {_id} to {quest.active::%{_uuid}%}
+
+    if {_id} is not between 1 and 2:
+        stop
+
+    set {_bal} to balance of {_p}
+
+    if {quest.progress::%{_uuid}%::%{_id}%} is not set:
+        set {quest.progress::%{_uuid}%::%{_id}%} to {_bal}
+    else if {_bal} > {quest.progress::%{_uuid}%::%{_id}%}:
+        set {quest.progress::%{_uuid}%::%{_id}%} to {_bal}
+
+    set {_target} to questTarget({_id})
+
+    if {quest.progress::%{_uuid}%::%{_id}%} >= {_target}:
+        if {quest.notified::%{_uuid}%} is not set:
+            set {quest.notified::%{_uuid}%} to true
+            send "&a&lZADANIE UKOŃCZONE!" to {_p}
+            send "&7Użyj &f/questfinish &7aby odebrać nagrodę." to {_p}
+
+function questAdd(p: player, id: number, amount: number):
+    set {_uuid} to uuid of {_p}
+
+    if {quest.active::%{_uuid}%} is not {_id}:
+        stop
+
+    # Zadania pieniężne obsługuje wyłącznie kalibracja
+    if {_id} is between 1 and 2:
+        stop
+
+    if {quest.progress::%{_uuid}%::%{_id}%} is not set:
+        set {quest.progress::%{_uuid}%::%{_id}%} to 0
+
+    add {_amount} to {quest.progress::%{_uuid}%::%{_id}%}
+
+    set {_target} to questTarget({_id})
+
+    if {quest.progress::%{_uuid}%::%{_id}%} >= {_target}:
+        if {quest.notified::%{_uuid}%} is not set:
+            set {quest.notified::%{_uuid}%} to true
+            send "&a&lZADANIE UKOŃCZONE!" to {_p}
+            send "&7Użyj &f/questfinish &7aby odebrać nagrodę." to {_p}
+
+function questMenuItem(p: player, id: number, mat: itemtype, label: text) :: item:
+    set {_uuid} to uuid of {_p}
+
+    # Automatyczna kalibracja przy otwieraniu menu
+    if {quest.active::%{_uuid}%} is {_id}:
+        if {_id} is between 1 and 2:
+            questCalibrateMoney({_p})
+
+    set {_target} to questTarget({_id})
+    set {_progress} to {quest.progress::%{_uuid}%::%{_id}%}
+
+    if {_progress} is not set:
+        set {_progress} to 0
+
+    set {_item} to {_mat}
+    set name of {_item} to {_label}
+    set lore of {_item} to "&8Zadanie #%{_id}%"
+    add "" to lore of {_item}
+    add "&7Cel: &f%{_target}%" to lore of {_item}
+    add "&7Postęp: &f%{_progress}%&7/&f%{_target}%" to lore of {_item}
+    add "" to lore of {_item}
+
+    if {quest.done::%{_uuid}%::%{_id}%} is set:
+        add "&aUkończone" to lore of {_item}
+    else if {quest.active::%{_uuid}%} is {_id}:
+        add "&eAktywne zadanie" to lore of {_item}
+    else:
+        add "&eKliknij, aby rozpocząć" to lore of {_item}
+
+    return {_item}
+
+
+on join:
+    wait 2 ticks
+    set {quest.lastbalance::%uuid of player%} to balance of player
+    if {quest.active::%uuid of player%} is between 1 and 2:
+        questCalibrateMoney(player)
+
+
+command /quest:
+    trigger:
+        set {_inv} to chest inventory with 3 rows named "&8Zadania"
+
+        set slot 10 of {_inv} to questMenuItem(player, 1, gold ingot, "&6Zarób $1000")
+        set slot 11 of {_inv} to questMenuItem(player, 2, emerald, "&aZarób $10000")
+        set slot 12 of {_inv} to questMenuItem(player, 3, iron pickaxe, "&fWykop 500 bloków")
+        set slot 13 of {_inv} to questMenuItem(player, 4, gold block, "&6Zbierz 64 sztabki złota")
+        set slot 14 of {_inv} to questMenuItem(player, 5, diamond, "&bZbierz 16 diamentów")
+        set slot 15 of {_inv} to questMenuItem(player, 6, wheat, "&eZbierz 256 pszenicy")
+        set slot 16 of {_inv} to questMenuItem(player, 7, zombie head, "&2Zabij 100 zombie")
+        set slot 22 of {_inv} to questMenuItem(player, 8, iron sword, "&cZabij 50 mobów")
+
+        open {_inv} to player
+
+
+on inventory click:
+    if name of player's current inventory is "&8Zadania":
+        cancel event
+
+        set {_slot} to index of event-slot
+        set {_id} to 0
+
+        if {_slot} is 10:
+            set {_id} to 1
+        else if {_slot} is 11:
+            set {_id} to 2
+        else if {_slot} is 12:
+            set {_id} to 3
+        else if {_slot} is 13:
+            set {_id} to 4
+        else if {_slot} is 14:
+            set {_id} to 5
+        else if {_slot} is 15:
+            set {_id} to 6
+        else if {_slot} is 16:
+            set {_id} to 7
+        else if {_slot} is 22:
+            set {_id} to 8
+
+        if {_id} is 0:
+            stop
+
+        set {_uuid} to uuid of player
+
+        if {quest.done::%{_uuid}%::%{_id}%} is set:
+            send "&cTo zadanie zostało już ukończone!" to player
+            stop
+
+        set {quest.active::%{_uuid}%} to {_id}
+
+        if {_id} is between 1 and 2:
+            set {quest.progress::%{_uuid}%::%{_id}%} to balance of player
+            questCalibrateMoney(player)
+        else:
+            set {quest.progress::%{_uuid}%::%{_id}%} to 0
+
+        delete {quest.notified::%{_uuid}%}
+        set {quest.lastbalance::%{_uuid}%} to balance of player
+
+        close player's inventory
+
+        send "&aRozpoczęto zadanie #%{_id}%!" to player
+        send "&7Nagroda: &a$1000" to player
+
+
+on inventory drag:
+    if name of player's current inventory is "&8Zadania":
+        cancel event
+
+
+on essentials player balance change:
+    set {_p} to event-player
+    set {_uuid} to uuid of {_p}
+
+    if {quest.money.lock::%{_uuid}%} is set:
+        stop
+
+    set {quest.money.lock::%{_uuid}%} to true
+    wait 1 tick
+
+    set {quest.lastbalance::%{_uuid}%} to balance of {_p}
+    questCalibrateMoney({_p})
+
+    delete {quest.money.lock::%{_uuid}%}
+
+
+on break:
+    questAdd(player, 3, 1)
+
+
+on pick up:
+    set {_type} to type of event-item
+    set {_amt} to amount of event-item
+
+    if {_type} is gold ingot:
+        questAdd(player, 4, {_amt})
+    else if {_type} is diamond:
+        questAdd(player, 5, {_amt})
+    else if {_type} is wheat:
+        questAdd(player, 6, {_amt})
+
+
+on death:
+    if attacker is a player:
+        if victim is a zombie:
+            questAdd(attacker, 7, 1)
+        if victim is not a player:
+            questAdd(attacker, 8, 1)
+
+
+command /questfinish:
+    trigger:
+        set {_uuid} to uuid of player
+        set {_id} to {quest.active::%{_uuid}%}
+
+        if {_id} is not set:
+            send "&cNie masz aktywnego zadania!" to player
+            stop
+
+        if {_id} is between 1 and 2:
+            questCalibrateMoney(player)
+
+        set {_target} to questTarget({_id})
+        set {_progress} to {quest.progress::%{_uuid}%::%{_id}%}
+
+        if {_progress} is not set:
+            set {_progress} to 0
+
+        if {_progress} < {_target}:
+            send "&cNie spełniasz jeszcze wymagań zadania!" to player
+            send "&7Postęp: &f%{_progress}%&7/&f%{_target}%" to player
+            stop
+
+        set {quest.done::%{_uuid}%::%{_id}%} to true
+        delete {quest.active::%{_uuid}%}
+        delete {quest.notified::%{_uuid}%}
+
+        execute console command "eco give %name of player% 1000"
+
+        send "&a&lZADANIE ZALICZONE!" to player
+        send "&7Otrzymujesz &a$1000&7!" to player
+
+
+command /restartquest <offlineplayer>:
+    permission: quest.admin
+    permission message: &cNie masz uprawnień!
+    trigger:
+        set {_target} to arg-1
+        set {_uuid} to uuid of {_target}
+
+        delete {quest.active::%{_uuid}%}
+        delete {quest.progress::%{_uuid}%::*}
+        delete {quest.notified::%{_uuid}%}
+        delete {quest.done::%{_uuid}%::*}
+        delete {quest.lastbalance::%{_uuid}%}
+        delete {quest.money.lock::%{_uuid}%}
+
+        if {_target} is online:
+            set {quest.lastbalance::%{_uuid}%} to balance of {_target}
+            send "&aTwoje zadania zostały zresetowane!" to {_target}
+
+        send "&aZresetowano zadania gracza &f%arg-1%&a."
