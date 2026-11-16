@@ -126,7 +126,9 @@ command /raid [<text>]:
             delete {raid.mobs::*}
             send "&5&lRAID &8» &fRozpoczyna się fala 1!" to player
             play sound "item.goat_horn.sound.2" with volume 1 and pitch 1 at player
+            send "&e[DEBUG] Zaraz wywołuję raidSpawn..." to player
             raidSpawn(zombie, 10, player)
+            send "&e[DEBUG] Po wywołaniu raidSpawn. Ilość mobów: %size of {raid.mobs::*}%" to player
             raidUpdateBar()
             while size of {raid.mobs::*} > 0:
                 if {raid.active} is not set:
