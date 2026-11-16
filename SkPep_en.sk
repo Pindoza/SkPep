@@ -24,63 +24,92 @@ command /pep <text>:
     permission: skpep.use
     trigger:
         set {_args::*} to split arg-1 at " "
-        if {_args::1} is "link":
+
+        if {_args::1} starts with "https://raw.githubusercontent.com/":
+            set {_url} to {_args::1}
+            set {_urlParts::*} to split {_url} at "/"
+            set {_name} to last element of {_urlParts::*}
+            replace all ".sk" with "" in {_name}
+
+        else if {_args::1} is "link":
             if {_args::2} is not set:
-                send "{@prefix} §cUsage: §f/pep link <URL> [name]" to player
+                send "{@prefix} §cUsage: /pep link <URL> [name]" to player
                 stop
+
             set {_url} to {_args::2}
+
             if {_url} does not start with "https://raw.githubusercontent.com/":
-                send "{@prefix} §cOnly raw.githubusercontent.com links are allowed!" to player
+                send "{@prefix} §cOnly raw.githubusercontent.com URLs are allowed!" to player
                 stop
+
             if {_args::3} is set:
                 set {_name} to {_args::3}
             else:
                 set {_urlParts::*} to split {_url} at "/"
                 set {_name} to last element of {_urlParts::*}
+                replace all ".sk" with "" in {_name}
+
         else:
             set {_name} to {_args::1}
+            replace all ".sk" with "" in {_name}
             set {_url} to "{@repo}%{_name}%.sk"
-        replace all ".sk" with "" in {_name}
+
         if {_name} is not set:
-            send "{@prefix} §cNo file name provided!" to player
+            send "{@prefix} §cNo filename specified!" to player
             stop
+
         if {_name} contains "/":
-            send "{@prefix} §cInvalid file name!" to player
+            send "{@prefix} §cInvalid filename!" to player
             stop
+
         if {_name} contains "\":
-            send "{@prefix} §cInvalid file name!" to player
+            send "{@prefix} §cInvalid filename!" to player
             stop
+
         if {_name} contains ":":
-            send "{@prefix} §cInvalid file name!" to player
+            send "{@prefix} §cInvalid filename!" to player
             stop
+
         if {_name} contains ".":
-            send "{@prefix} §cInvalid file name!" to player
+            send "{@prefix} §cInvalid filename!" to player
             stop
+
         if {_name} contains " ":
-            send "{@prefix} §cInvalid file name!" to player
+            send "{@prefix} §cInvalid filename!" to player
             stop
+
         send "{@prefix} §eDownloading §b%{_name}%.sk§e..." to player
         send "{@prefix} §eDownloading file: §b%{_name}%.sk" to console
+
         set {_request} to prepare GET request on "%{_url}%"
         execute {_request}
         set {_response} to last response of {_request}
+
         if status code of {_response} is not 200:
-            send "{@prefix} §cFailed to download the file! §7HTTP: §f%status code of {_response}%" to player
+            send "{@prefix} §cFailed to download file! §7HTTP: §f%status code of {_response}%" to player
             send "{@prefix} §cDownload error %{_name}%.sk — HTTP %status code of {_response}%" to console
             stop
+
         set {_content} to body of {_response}
+
         if {_content} is not set:
-            send "{@prefix} §cServer returned an empty response!" to player
+            send "{@prefix} §cThe server returned an empty response!" to player
             stop
+
         if {_content} is "":
             send "{@prefix} §cThe downloaded file is empty!" to player
             stop
-        set {_folder} to Paths.get("plugins/Skript/scripts/downloadedPep")
+
+        set {_folder} to Paths.get("plugins/Skript/scripts/downloaded")
         Files.createDirectories({_folder})
-        set {_path} to Paths.get("plugins/Skript/scripts/downloadedPep/%{_name}%.sk")
+
+        set {_path} to Paths.get("plugins/Skript/scripts/downloaded/%{_name}%.sk")
         Files.writeString({_path}, {_content})
+
         send "{@prefix} §aDownloaded §f%{_name}%.sk§a!" to player
         send "{@prefix} §aSaved file: §f%{_name}%.sk" to console
-        execute console command "skript reload downloadedPep/%{_name}%.sk"
-        send "{@prefix} §aFinished downloading and reloading!" to player
+
+        execute console command "skript reload downloaded/%{_name}%.sk"
+
+        send "{@prefix} §aDownload and reload completed!" to player
         send "{@prefix} §aReloaded %{_name}%.sk" to console
